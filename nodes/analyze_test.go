@@ -84,6 +84,25 @@ func TestAnalyze_ConsistentWithIndividualNodes(t *testing.T) {
 	}
 }
 
+// TestAnalyze_TrailingBlankLine is the same regression as
+// TestSegmentSentences_TrailingBlankLine, checked through the combined node
+// too — Analyze must not surface the phantom empty sentence either.
+func TestAnalyze_TrailingBlankLine(t *testing.T) {
+	ctx := context.Background()
+	ax := newTestContext(t)
+
+	got, err := nodes.Analyze(ctx, ax, &gen.Document{Text: "Hello world.\n\n"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Sentences) != 1 {
+		t.Fatalf("sentence count = %d, want 1 (%v)", len(got.Sentences), got.Sentences)
+	}
+	if got.Sentences[0].Text != "Hello world." {
+		t.Errorf("sentences[0].Text = %q, want %q", got.Sentences[0].Text, "Hello world.")
+	}
+}
+
 // TestAnalyze_OversizedInput is the error-path test.
 func TestAnalyze_OversizedInput(t *testing.T) {
 	ctx := context.Background()

@@ -73,11 +73,18 @@ func (c *cursor) locate(piece string) (int32, int32) {
 }
 
 // tokensToProto converts prose tokens into gen.Token, recovering offsets
-// with a dedicated cursor over the original text.
+// with a dedicated cursor over the original text. Tokens whose text is empty
+// or all-whitespace are dropped — prose can emit a phantom empty token/
+// sentence/entity for trailing blank lines or whitespace-only input (see
+// entitiesToProto/sentencesToProto for the same guard), and a piece of text
+// with nothing in it is not a real segmented unit worth reporting.
 func tokensToProto(text string, toks []prose.Token) []*gen.Token {
 	c := &cursor{text: text}
 	out := make([]*gen.Token, 0, len(toks))
 	for _, t := range toks {
+		if strings.TrimSpace(t.Text) == "" {
+			continue
+		}
 		start, end := c.locate(t.Text)
 		out = append(out, &gen.Token{
 			Text:  t.Text,
@@ -91,11 +98,15 @@ func tokensToProto(text string, toks []prose.Token) []*gen.Token {
 }
 
 // entitiesToProto converts prose entities into gen.Entity, recovering
-// offsets with a dedicated cursor over the original text.
+// offsets with a dedicated cursor over the original text. See the
+// empty/whitespace guard note on tokensToProto.
 func entitiesToProto(text string, ents []prose.Entity) []*gen.Entity {
 	c := &cursor{text: text}
 	out := make([]*gen.Entity, 0, len(ents))
 	for _, e := range ents {
+		if strings.TrimSpace(e.Text) == "" {
+			continue
+		}
 		start, end := c.locate(e.Text)
 		out = append(out, &gen.Entity{
 			Text:  e.Text,
@@ -108,11 +119,18 @@ func entitiesToProto(text string, ents []prose.Entity) []*gen.Entity {
 }
 
 // sentencesToProto converts prose sentences into gen.Sentence, recovering
-// offsets with a dedicated cursor over the original text.
+// offsets with a dedicated cursor over the original text. prose's Punkt
+// segmenter can emit a trailing empty Sentence{Text: ""} for input ending in
+// a blank line or trailing whitespace-then-newline (verified against
+// jdkato/prose directly) — that is not a real sentence, so it is dropped
+// here rather than forwarded as a phantom {start:-1, end:-1} entry.
 func sentencesToProto(text string, sents []prose.Sentence) []*gen.Sentence {
 	c := &cursor{text: text}
 	out := make([]*gen.Sentence, 0, len(sents))
 	for _, s := range sents {
+		if strings.TrimSpace(s.Text) == "" {
+			continue
+		}
 		start, end := c.locate(s.Text)
 		out = append(out, &gen.Sentence{
 			Text:  s.Text,
