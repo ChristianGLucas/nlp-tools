@@ -1,0 +1,21 @@
+name: christiangeorgelucas/nlp-tools
+version: 0.1.0
+language: go
+description: Composable Axiom structured natural-language-processing nodes (tokenization + Penn Treebank POS tagging, named-entity recognition, sentence segmentation, and a combined one-shot Analyze) over a single Document text envelope, wrapping the MIT-licensed jdkato/prose (v2) library. Every model is compiled directly into the binary (no runtime download, no external service). Stateless, offline, deterministic, with a 2 MiB input cap and recovered byte-offset positions for every token/entity/sentence.
+nodes:
+    - name: Tokenize
+      input: Document
+      output: TokensResult
+      description: Split text into word/punctuation tokens and tag each with its Penn Treebank part-of-speech tag (e.g. NNP, VBZ), using jdkato/prose's tokenizer and averaged-perceptron tagger. Each token carries its recovered byte-offset span in the original text and, when it participates in a named entity, an IOB label. Input over 2 MiB or invalid UTF-8 returns a structured error rather than crashing.
+    - name: ExtractEntities
+      input: Document
+      output: EntitiesResult
+      description: Recognize named entities in text (people, organizations, locations, and similar categories from prose's bundled Maxent classifier), returning each entity's text, category label, and recovered byte-offset span in the original text. An entity whose reconstructed spacing cannot be matched exactly reports offset -1 rather than a wrong guess. Input over 2 MiB or invalid UTF-8 returns a structured error.
+    - name: SegmentSentences
+      input: Document
+      output: SentencesResult
+      description: Split text into sentences with jdkato/prose's Punkt sentence tokenizer, which correctly handles abbreviations like "Dr." and "U.K." without splitting on their periods. Returns each sentence's text and recovered byte-offset span in the original text. Input over 2 MiB or invalid UTF-8 returns a structured error.
+    - name: Analyze
+      input: Document
+      output: AnalyzeResult
+      description: Run the full prose pipeline over text in one call — tagged tokenization, named-entity extraction, and sentence segmentation together — returning all three result sets. The efficient one-shot alternative to invoking Tokenize, ExtractEntities, and SegmentSentences separately when a caller wants everything. Input over 2 MiB or invalid UTF-8 returns a structured error.

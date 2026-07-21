@@ -1,0 +1,131 @@
+// Data contracts for christiangeorgelucas/nlp-tools — stateless structured
+// natural-language-processing nodes wrapping the MIT-licensed jdkato/prose
+// (v2) library: tokenization, part-of-speech tagging, named-entity
+// recognition, and sentence segmentation over plain English text.
+//
+// COMPOSABILITY. Every node consumes the same `Document` envelope, whose
+// single `text` field deliberately matches the `text` field already used by
+// christiangeorgelucas/ocr-tools' OcrResult/TextOut, pdf-tools' TextResult,
+// and html-tools' TextResult — so any of those packages' text output flows
+// straight into this package's nodes with a trivial one-field mapping, no
+// adapter needed. (No pre-existing shared "text envelope" package exists yet
+// to import from — each of those three packages defines its own local text
+// message independently — so this field-name alignment is the composability
+// mechanism, not a shared type.)
+//
+// OFFSETS. prose's tokenizer/segmenter/extractor do not track character
+// positions natively. Nodes below recover them with a deterministic,
+// left-to-right substring search over the original text (each token/entity/
+// sentence is located starting from the end of the previous match). This is
+// exact whenever the recovered text is a literal substring of the input,
+// which holds for every token prose emits (splits, never rewrites,
+// characters). When a piece of text cannot be located (should not happen in
+// practice, but the search is defensive), start and end are both -1 rather
+// than a wrong guess.
+//
+// SIZE BOUND. Input text is capped at 2 MiB (2,097,152 bytes) to keep the
+// segmentation/tagging pipeline's cost bounded; oversized or non-UTF-8 input
+// returns a structured error rather than crashing or hanging.
+
+syntax = "proto3";
+
+package christiangeorgelucas.nlp_tools;
+
+option go_package = ".;gen";
+
+// The shared input envelope: plain text to analyze. Capped at 2 MiB and must
+// be valid UTF-8; oversized or invalid input yields a structured error on
+// every node below rather than a crash.
+message Document {
+  // The text to analyze.
+  string text = 1;
+}
+
+// A single token (word or punctuation symbol) with its part-of-speech tag
+// and its location in the original text.
+message Token {
+  // The token's literal text, exactly as it appears in the input.
+  string text = 1;
+  // Penn Treebank-style part-of-speech tag (e.g. "NNP", "VBZ", ".").
+  string tag = 2;
+  // IOB-style named-entity label attached to this token by the tagger's
+  // entity classifier (e.g. "B-PERSON", "I-ORG"), or empty if the token is
+  // not part of a recognized entity. Independent of ExtractEntities' own
+  // (coarser, chunked) entity list.
+  string label = 3;
+  // Byte offset of the token's first character in the original `text`, or
+  // -1 if the token could not be located (see OFFSETS above).
+  int32 start = 4;
+  // Byte offset one past the token's last character in the original `text`,
+  // or -1 if the token could not be located.
+  int32 end = 5;
+}
+
+// Result of tagging a document's tokens with part-of-speech tags.
+message TokensResult {
+  // Tokens in document order.
+  repeated Token tokens = 1;
+  // Structured error message; empty on success. Set instead of crashing on
+  // oversized, non-UTF-8, or otherwise invalid input.
+  string error = 2;
+}
+
+// A single named entity recognized in the text.
+message Entity {
+  // The entity's literal text, exactly as it appears in the input.
+  string text = 1;
+  // The entity's category label (e.g. "PERSON", "ORGANIZATION", "LOCATION",
+  // "GPE", "FACILITY", "PRODUCT" — the exact label set is determined by the
+  // wrapped model).
+  string label = 2;
+  // Byte offset of the entity's first character in the original `text`, or
+  // -1 if it could not be located (see OFFSETS above).
+  int32 start = 3;
+  // Byte offset one past the entity's last character in the original
+  // `text`, or -1 if it could not be located.
+  int32 end = 4;
+}
+
+// Result of extracting named entities from a document.
+message EntitiesResult {
+  // Entities in document order.
+  repeated Entity entities = 1;
+  // Structured error message; empty on success.
+  string error = 2;
+}
+
+// A single sentence segmented from the text.
+message Sentence {
+  // The sentence's literal text, exactly as it appears in the input
+  // (whitespace-trimmed at the boundary prose reports).
+  string text = 1;
+  // Byte offset of the sentence's first character in the original `text`,
+  // or -1 if it could not be located (see OFFSETS above).
+  int32 start = 2;
+  // Byte offset one past the sentence's last character in the original
+  // `text`, or -1 if it could not be located.
+  int32 end = 3;
+}
+
+// Result of segmenting a document into sentences.
+message SentencesResult {
+  // Sentences in document order.
+  repeated Sentence sentences = 1;
+  // Structured error message; empty on success.
+  string error = 2;
+}
+
+// Combined result of running the full pipeline (tokenize + tag, extract
+// entities, segment sentences) over a document in a single call — the
+// efficient one-shot alternative to invoking TagPOS, ExtractEntities, and
+// SegmentSentences separately.
+message AnalyzeResult {
+  // Tagged tokens in document order.
+  repeated Token tokens = 1;
+  // Recognized entities in document order.
+  repeated Entity entities = 2;
+  // Segmented sentences in document order.
+  repeated Sentence sentences = 3;
+  // Structured error message; empty on success.
+  string error = 4;
+}
