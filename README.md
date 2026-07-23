@@ -1,6 +1,6 @@
 # christiangeorgelucas/nlp-tools
 
-Composable [Axiom](https://axiom.dev) nodes for structured natural-language
+Composable [Axiom](https://axiomide.com) nodes for structured natural-language
 processing over plain text: tokenization with part-of-speech tagging, named-entity
 recognition, and sentence segmentation. Built for the Axiom marketplace.
 
