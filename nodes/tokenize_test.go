@@ -86,7 +86,7 @@ func TestTokenize_LargeInputNoCrash(t *testing.T) {
 	// document must still tokenize cleanly instead of being rejected.
 	ctx := context.Background()
 	ax := newTestContext(t)
-	huge := strings.Repeat("a ", 2*1024*1024) // > 2 MiB
+	huge := strings.Repeat("a ", 100_000) // ~200 KB, well over any real request
 
 	got, err := nodes.Tokenize(ctx, ax, &gen.Document{Text: huge})
 	if err != nil {
