@@ -1,7 +1,6 @@
 package nodes
 
 import (
-	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -9,21 +8,13 @@ import (
 	"github.com/jdkato/prose/v2"
 )
 
-// maxDocumentBytes bounds the size of input text every node will process.
-// prose's segmentation/tagging pipeline is roughly linear in input size but
-// unbounded input still means unbounded per-request cost — cap it, the same
-// way christiangeorgelucas/pdf-tools caps page count and ocr-tools caps image
-// bytes/megapixels on untrusted input.
-const maxDocumentBytes = 2 * 1024 * 1024 // 2 MiB
-
-// validateText checks a Document's text against the package's hard size and
-// encoding bounds, returning a non-empty, human-readable error string when
-// the input should be rejected (never panics or lets a downstream library
-// misbehave on invalid input).
+// validateText checks a Document's text against the package's encoding
+// bound, returning a non-empty, human-readable error string when the input
+// should be rejected (never panics or lets a downstream library misbehave
+// on invalid input). Payload size is the platform's job, not this
+// package's — prose's segmentation/tagging pipeline is linear in input
+// size, so there is no package-specific cost cliff to bound here.
 func validateText(text string) string {
-	if len(text) > maxDocumentBytes {
-		return fmt.Sprintf("text exceeds the %d byte limit (got %d bytes)", maxDocumentBytes, len(text))
-	}
 	if !utf8.ValidString(text) {
 		return "text is not valid UTF-8"
 	}

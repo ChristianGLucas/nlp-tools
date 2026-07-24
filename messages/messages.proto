@@ -23,9 +23,9 @@
 // practice, but the search is defensive), start and end are both -1 rather
 // than a wrong guess.
 //
-// SIZE BOUND. Input text is capped at 2 MiB (2,097,152 bytes) to keep the
-// segmentation/tagging pipeline's cost bounded; oversized or non-UTF-8 input
-// returns a structured error rather than crashing or hanging.
+// ENCODING. No package-level size limit (the platform bounds payload size;
+// prose's segmentation/tagging pipeline is linear in input size); non-UTF-8
+// input returns a structured error rather than crashing or hanging.
 
 syntax = "proto3";
 
@@ -33,9 +33,9 @@ package christiangeorgelucas.nlp_tools;
 
 option go_package = ".;gen";
 
-// The shared input envelope: plain text to analyze. Capped at 2 MiB and must
-// be valid UTF-8; oversized or invalid input yields a structured error on
-// every node below rather than a crash.
+// The shared input envelope: plain text to analyze. Must be valid UTF-8;
+// invalid input yields a structured error on every node below rather than
+// a crash.
 message Document {
   // The text to analyze.
   string text = 1;
